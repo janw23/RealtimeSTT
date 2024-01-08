@@ -73,6 +73,7 @@ class AudioToTextRecorder:
 
     def __init__(self,
                  model: str = INIT_MODEL_TRANSCRIPTION,
+                 compute_type: str = "int8_float16",
                  language: str = "",
                  on_recording_start=None,
                  on_recording_stop=None,
@@ -86,6 +87,7 @@ class AudioToTextRecorder:
                  # Realtime transcription parameters
                  enable_realtime_transcription=False,
                  realtime_model_type=INIT_MODEL_TRANSCRIPTION_REALTIME,
+                 realtime_compute_type: str = "int8_float16",
                  realtime_processing_pause=INIT_REALTIME_PROCESSING_PAUSE,
                  on_realtime_transcription_update=None,
                  on_realtime_transcription_stabilized=None,
@@ -133,6 +135,8 @@ class AudioToTextRecorder:
                 'large-v2'.
                 If a specific size is provided, the model is downloaded
                 from the Hugging Face Hub.
+        - compute_type(str, default="int8_float16"): Specifies the compute
+            recision of the model.
         - language (str, default=""): Language code for speech-to-text engine.
             If not specified, the model will attempt to detect the language
             automatically.
@@ -162,6 +166,8 @@ class AudioToTextRecorder:
             learning model to be used for real-time transcription. Valid
             options include 'tiny', 'tiny.en', 'base', 'base.en', 'small',
             'small.en', 'medium', 'medium.en', 'large-v1', 'large-v2'.
+        - realtime_compute_type(str, default="int8_float16"): Specifies the
+        compute precision of the realtime model.
         - realtime_processing_pause (float, default=0.1): Specifies the time
             interval in seconds after a chunk of audio gets transcribed. Lower
             values will result in more "real-time" (frequent) transcription
@@ -339,7 +345,8 @@ class AudioToTextRecorder:
                 model,
                 self.main_transcription_ready_event,
                 self.shutdown_event,
-                self.interrupt_stop_event
+                self.interrupt_stop_event,
+                compute_type
             )
         )
         self.transcript_process.start()
@@ -366,7 +373,8 @@ class AudioToTextRecorder:
                              )
                 self.realtime_model_type = faster_whisper.WhisperModel(
                     model_size_or_path=self.realtime_model_type,
-                    device='cuda' if torch.cuda.is_available() else 'cpu'
+                    device='cuda' if torch.cuda.is_available() else 'cpu',
+                    compute_type=realtime_compute_type
                 )
 
             except Exception as e:
@@ -481,7 +489,8 @@ class AudioToTextRecorder:
                               model_path,
                               ready_event,
                               shutdown_event,
-                              interrupt_stop_event):
+                              interrupt_stop_event,
+                              compute_type):
         """
         Worker method that handles the continuous
         process of transcribing audio data.
@@ -503,6 +512,7 @@ class AudioToTextRecorder:
               transcription model is successfully initialized and ready.
             shutdown_event (threading.Event): An event that, when set,
               signals this worker method to terminate.
+            compute_type (str): Specifies the compute precision of the model.
 
         Raises:
             Exception: If there is an error while initializing the
@@ -516,7 +526,8 @@ class AudioToTextRecorder:
         try:
             model = faster_whisper.WhisperModel(
                 model_size_or_path=model_path,
-                device='cuda' if torch.cuda.is_available() else 'cpu'
+                device='cuda' if torch.cuda.is_available() else 'cpu',
+                compute_type=compute_type
             )
 
         except Exception as e:
