@@ -46,21 +46,31 @@ if __name__ == '__main__':
     def process_text(text):
         full_sentences.append(text)
         text_detected("")
+    
+    def on_vad_detect_stop():
+        print("<|voice detected|>", end="", flush=True)
 
     recorder_config = {
         'spinner': False,
-        'model': 'large-v2',
-        'language': 'en',
-        'silero_sensitivity': 0.4,
+        # 'model': 'large-v2',
+        'model': 'large-v3', # "medium" fits 2GB VRAM if used with "int8_float16" compute type
+        'device': 'cpu', # "cuda"
+        'compute_type': 'float32',
+        'language': 'pl',
+        'silero_sensitivity': 0.6, # the higher the more eager to detect speech but prone to misdetection
+        'silero_use_onnx': True,
         'webrtc_sensitivity': 2,
         'post_speech_silence_duration': 0.4,
         'min_length_of_recording': 0,
         'min_gap_between_recordings': 0,
         'enable_realtime_transcription': True,
         'realtime_processing_pause': 0.2,
-        'realtime_model_type': 'tiny.en',
+        'realtime_model_type': 'small',
+        'realtime_device': 'cuda',
+        'realtime_compute_type': 'float16',
         'on_realtime_transcription_update': text_detected, 
         #'on_realtime_transcription_stabilized': text_detected,
+        'on_vad_detect_stop': on_vad_detect_stop,
     }
 
     recorder = AudioToTextRecorder(**recorder_config)
