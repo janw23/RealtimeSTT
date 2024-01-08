@@ -74,6 +74,7 @@ class AudioToTextRecorder:
     def __init__(self,
                  model: str = INIT_MODEL_TRANSCRIPTION,
                  compute_type: str = "int8_float16",
+                 device="cuda",
                  language: str = "",
                  on_recording_start=None,
                  on_recording_stop=None,
@@ -88,6 +89,7 @@ class AudioToTextRecorder:
                  enable_realtime_transcription=False,
                  realtime_model_type=INIT_MODEL_TRANSCRIPTION_REALTIME,
                  realtime_compute_type: str = "int8_float16",
+                 realtime_device="cuda",
                  realtime_processing_pause=INIT_REALTIME_PROCESSING_PAUSE,
                  on_realtime_transcription_update=None,
                  on_realtime_transcription_stabilized=None,
@@ -346,7 +348,8 @@ class AudioToTextRecorder:
                 self.main_transcription_ready_event,
                 self.shutdown_event,
                 self.interrupt_stop_event,
-                compute_type
+                compute_type,
+                device
             )
         )
         self.transcript_process.start()
@@ -373,8 +376,9 @@ class AudioToTextRecorder:
                              )
                 self.realtime_model_type = faster_whisper.WhisperModel(
                     model_size_or_path=self.realtime_model_type,
-                    device='cuda' if torch.cuda.is_available() else 'cpu',
-                    compute_type=realtime_compute_type
+                    device=realtime_device,
+                    compute_type=realtime_compute_type,
+                    cpu_threads=os.cpu_count()
                 )
 
             except Exception as e:
@@ -490,7 +494,8 @@ class AudioToTextRecorder:
                               ready_event,
                               shutdown_event,
                               interrupt_stop_event,
-                              compute_type):
+                              compute_type,
+                              device):
         """
         Worker method that handles the continuous
         process of transcribing audio data.
@@ -526,8 +531,9 @@ class AudioToTextRecorder:
         try:
             model = faster_whisper.WhisperModel(
                 model_size_or_path=model_path,
-                device='cuda' if torch.cuda.is_available() else 'cpu',
-                compute_type=compute_type
+                device=device,
+                compute_type=compute_type,
+                cpu_threads=os.cpu_count(),
             )
 
         except Exception as e:
